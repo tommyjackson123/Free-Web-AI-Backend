@@ -1,14 +1,23 @@
-module.exports = (req, res) => {
-  if (req.method === 'POST') {
-    const { inputData } = req.body;
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
 
-    if (!inputData) {
-      return res.status(400).json({ error: 'No input data provided' });
-    }
+// Middleware to parse JSON requests
+app.use(express.json());
 
-    // Here you can add your AI logic, for now, it just sends back the input
-    return res.status(200).json({ message: 'AI task completed', data: inputData });
-  } else {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-};
+// POST route for handling requests
+app.post('/', (req, res) => {
+  const { inputData } = req.body;  // This will get the inputData sent from the frontend
+
+  // Respond with a JSON message
+  res.json({
+    message: 'AI task completed',
+    data: inputData
+  });
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+

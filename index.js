@@ -1,23 +1,66 @@
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
+import { useState } from 'react';
 
-// Middleware to parse JSON requests
-app.use(express.json());
+export default function Home() {
+  const [input, setInput] = useState('');
+  const [result, setResult] = useState(null);
 
-// POST route for handling requests
-app.post('/', (req, res) => {
-  const { inputData } = req.body;  // This will get the inputData sent from the frontend
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setResult('Processing...');
 
-  // Respond with a JSON message
-  res.json({
-    message: 'AI task completed',
-    data: inputData
-  });
-});
+    try {
+      const response = await fetch('https://free-web-ai-backend.vercel.app/api/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inputData: input }),
+      });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+      const data = await response.json();
 
+      if (data.task === 'video') {
+        setResult(
+          <>
+            <p>{data.message}</p>
+            <video src={data.url} controls width="400" />
+          </>
+        );
+      } else if (data.task === 'code') {
+        setResult(
+          <>
+            <p>{data.message}</p>
+            <pre><code>{data.code}</code></pre>
+          </>
+        );
+      } else {
+        setResult(
+          <>
+            <p>{data.message}</p>
+            <p>{data.text}</p>
+          </>
+        );
+      }
+    } catch (error) {
+      setResult(`Error: ${error.message}`);
+    }
+  };
+
+  return (
+    <main style={{ padding: '20px' }}>
+      <h1>Free Web AI</h1>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your task..."
+          required
+          style={{ width: '300px', marginRight: '10px' }}
+        />
+        <button type="submit">Submit</button>
+      </form>
+      <div style={{ marginTop: '20px' }}>{result}</div>
+    </main>
+  );
+}

@@ -1,45 +1,30 @@
-import { useState } from 'react';
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
 
-function App() {
-  const [input, setInput] = useState('');
-  const [result, setResult] = useState(null);
+// Middleware to parse JSON and handle CORS
+app.use(express.json());
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch('https://free-web-ai-backend.vercel.app', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ inputData: input }),
-      });
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
-      const data = await response.json();
-      setResult(data);  // Display result from the backend
-    } catch (error) {
-      setResult({ error: 'An error occurred' });
-    }
-  };
+// Main POST route
+app.post('/api/process', (req, res) => {
+  const { inputData } = req.body;
 
-  return (
-    <div>
-      <h1>Task AI</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your task"
-          required
-        />
-        <button type="submit">Submit</button>
-      </form>
+  res.json({
+    message: 'AI task completed',
+    data: inputData
+  });
+});
 
-      {result && <div>{JSON.stringify(result)}</div>}
-    </div>
-  );
-}
-
-export default App;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});

@@ -13,36 +13,27 @@ export default async function handler(req, res) {
 
   const { inputData } = req.body;
 
-  // Detect the task type
-  const isCodeRequest = /code|app|website|extension|script|function|build/i.test(inputData);
+  if (!inputData) {
+    return res.status(400).json({ error: 'Missing inputData' });
+  }
 
   try {
     const response = await fetch(
-      isCodeRequest
-        ? 'https://api-inference.huggingface.co/models/bigcode/starcoder'
-        : 'https://api-inference.huggingface.co/models/bigscience/bloomz',
+      'https://api-inference.huggingface.co/models/gpt2',
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer YOUR_HUGGINGFACE_API_KEY`,
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_TOKEN}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ inputs: inputData }),
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`HuggingFace error: ${response.statusText}`);
-    }
+    const data = await response.json();
 
-    const result = await response.json();
-
-    res.status(200).json({
-      success: true,
-      result: result[0]?.generated_text || 'No response from model.',
-    });
+    res.status(200).json({ message: 'AI task completed', result: data });
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ error: 'Failed to process request', detail: error.message });
   }
 }

@@ -12,25 +12,65 @@ export default async function handler(req, res) {
   }
 
   const { inputData } = req.body;
+  if (!inputData) {
+    return res.status(400).json({ error: 'Missing inputData' });
+  }
+
+  const task = inputData.toLowerCase();
 
   try {
-    const hfResponse = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-cnn', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ inputs: inputData }),
-    });
+    let result;
 
-    if (!hfResponse.ok) {
-      const error = await hfResponse.text();
-      return res.status(500).json({ error: 'Hugging Face API error', details: error });
+    if (task.includes('summarize') || task.includes('summary')) {
+      result = await handleTextSummarization(task);
+    } else if (task.includes('image') || task.includes('generate image') || task.includes('picture')) {
+      result = await handleImageGeneration(task);
+    } else {
+      result = { message: "🤖 Sorry, I don't recognize this task (yet)." };
     }
 
-    const result = await hfResponse.json();
-    res.status(200).json({ message: 'AI Task Completed ✅', result });
-  } catch (error) {
-    res.status(500).json({ error: 'Something went wrong', details: error.message });
+    res.status(200).json({ message: "AI Task Completed ✅", result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "AI Task Failed", details: err.message });
   }
+}
+
+// Hugging Face Helpers
+async function handleTextSummarization(text) {
+  const response = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-cnn", {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.HF_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ inputs: text })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Hugging Face API error: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+async function handleImageGeneration(prompt) {
+  const response = await fetch("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2", {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.HF_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ inputs: prompt })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Hugging Face API error: ${errorText}`);
+  }
+
+  const imageBuffer = await response.arrayBuffer();
+  const base64Image = Buffer.from(imageBuffer).toString('base64');
+  return { image: `data:image/png;base64,${base64Image}` };
 }

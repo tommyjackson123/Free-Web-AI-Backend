@@ -13,27 +13,24 @@ export default async function handler(req, res) {
 
   const { inputData } = req.body;
 
-  if (!inputData) {
-    return res.status(400).json({ error: 'Missing inputData' });
-  }
-
   try {
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/gpt2',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.HUGGINGFACE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ inputs: inputData }),
-      }
-    );
+    const hfResponse = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-cnn', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.HUGGINGFACE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ inputs: inputData }),
+    });
 
-    const data = await response.json();
+    if (!hfResponse.ok) {
+      const error = await hfResponse.text();
+      return res.status(500).json({ error: 'Hugging Face API error', details: error });
+    }
 
-    res.status(200).json({ message: 'AI task completed', result: data });
+    const result = await hfResponse.json();
+    res.status(200).json({ message: 'AI Task Completed ✅', result });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to process request', detail: error.message });
+    res.status(500).json({ error: 'Something went wrong', details: error.message });
   }
 }
